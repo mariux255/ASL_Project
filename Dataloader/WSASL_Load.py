@@ -70,14 +70,19 @@ class MyCustomDataset(Dataset):
 		self.training_data = []
 		if category == "labels_100":
 			make_training_data(labels_100)
+			self.labels_x = labels_100
 		elif category == "labels_200":
 			make_training_data(labels_200)
+			self.labels_x = labels_100
 		elif category == "labels_500":
 			make_training_data(labels_500)
+			self.labels_x = labels_100
 		elif category == "labels_1000":
 			make_training_data(labels_1000)
+			self.labels_x = labels_100
 		elif category == "labels_2000":
 			make_training_data(labels_2000)
+			self.labels_x = labels_100
 		        
 
     def exctract_frames(self, labels_x, frame_location, video_file_path):
@@ -107,7 +112,7 @@ class MyCustomDataset(Dataset):
 					count += 1
 				video_count += 1
 
-	def total_videos(self, labels_x):
+	def total_videos(self):
 		sum_count = 0
 		for label in labels_x:
 			for video in video_id_dictionary[label]:
@@ -126,13 +131,15 @@ class MyCustomDataset(Dataset):
 	                    try:
 	                        path = os.path.join(data_directory,video, file)
 	                        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-	                        self.training_data.append([np.array(img),self.labels_iterated[label]])
+	                        self.training_data.append([torch.Tensor(img),self.labels_iterated[label]])
 	                    except Exception as e:
 	                        print(e)
 	                        pass
 
+
+
 	def __getitem__(self, index):
         return training_data(index)
 
-    def __len__(self, labels_x):
+    def __len__(self):
         return total_videos(labels_x)
