@@ -13,19 +13,19 @@ import tqdm
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 128, 5)
+        self.conv1 = nn.Conv2d(3, 128, 3)
         self.pool = nn.MaxPool2d(4, 4)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(128, 256, 5)
-        self.conv3 = nn.Conv2d(256, 512, 5)
-        self.conv4 = nn.Conv2d(512, 256, 5)
-        self.fc3 = nn.Linear(16384, 100)
+        self.conv2 = nn.Conv2d(128, 256, 3)
+        self.conv3 = nn.Conv2d(256, 512, 3)
+        self.conv4 = nn.Conv2d(512, 256, 3)
+        self.fc3 = nn.Linear(2304, 100)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
         x = self.pool2(F.relu(self.conv3(x)))
         x = F.relu(self.conv4(x))
-        x = x.view(-1, 16384)
+        x = x.view(-1, 2304)
         x = self.fc3(x)
         return x
