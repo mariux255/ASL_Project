@@ -3,7 +3,7 @@ import os
 import json
 import cv2
 
-def main(frame_location="/Users/mjo/Desktop/WLASL/Processed_data/",json_file_path="/Users/mjo/Desktop/WLASL/WLASL_v0.3.json",extract_frames_bool = True,video_file_path="/Users/mjo/Desktop/WLASL/WLASL2000"):
+def main(frame_location="/scratch/s174411/Processed_data/",json_file_path="/scratch/s174411/WLASL_v0.3.json",extract_frames_bool = True,video_file_path="/scratch/s174411/WLASL2000"):
     # Defining count_dictionary which contains the number of videos for each class
     # and defining video_id_dictionary which has all of the video id's for each class.
     with open(json_file_path, "r") as read_file:

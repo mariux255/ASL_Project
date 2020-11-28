@@ -4,10 +4,10 @@ import json
 import cv2
 import os
 import numpy as np
-
+from tqdm import tqdm
 
 class MyCustomDataset(Dataset):
-    def __init__(self, category, json_file_path="/Users/mjo/Desktop/WLASL/WLASL_v0.3.json", video_file_path="/Users/mjo/Desktop/WLASL/WLASL2000", frame_location="/Users/mjo/Desktop/WLASL/Processed_data/"):
+    def __init__(self, category, json_file_path="/scratch/s174411/WLASL/WLASL_v0.3.json", frame_location="/scratch/s174411/Processed_data/"):
         self.frame_location = frame_location
         # Defining count_dictionary which contains the number of videos for each class
         # and defining video_id_dictionary which has all of the video id's for each class.
@@ -33,7 +33,9 @@ class MyCustomDataset(Dataset):
         self.Categories(category, frame_location)
 
     def __getitem__(self, index):
-        return self.training_data[index]
+        img = self.images[index]
+        lab = self.labels[index]
+        return [img,lab]
 
 
     def __len__(self):
@@ -57,23 +59,54 @@ class MyCustomDataset(Dataset):
 
 
     def make_training_data(self, labels_x,frame_location):
-
-
+        buffer_size = 16
+        self.images = []
+        self.labels = []
         data_directory = ("{}/{}".format(frame_location, len(labels_x)))
         num_labels = len(labels_x)
-        for label in (labels_x):
+        for label in tqdm(labels_x):
+            
             for video in self.video_id_dictionary[label]:
+                
                 path = os.path.join(data_directory, video)
-                for file in (os.listdir(path)):
-                    if "jpg" in file:
-                        try:
-                            path = os.path.join(data_directory, video, file)
-                            img = np.array(cv2.imread(path)).astype(np.float64)
-                            img = cv2.resize(img,(112,112))
-                            self.training_data.append([torch.Tensor(img), self.labels_iterated[label]])
-                        except Exception as e:
-                            print(e)
-                            pass
+                path_list = os.listdir(path)
+                number_of_frames = len([file for file in os.listdir(path) if "jpg" in file])
+                save_frequency = np.floor(number_of_frames/buffer_size)
+                if save_frequency == 0:
+                    save_frequency = 1
+                if number_of_frames % save_frequency == 0:
+                    save_start = 0
+                else:
+                    save_start = save_frequency
+                if number_of_frames % save_frequency != 0 or number_of_frames / save_frequency > buffer_size:
+                    save_start =(np.ceil(number_of_frames/save_frequency)-buffer_size)*save_frequency
+                to_repeat=False
+                if number_of_frames < buffer_size:
+                    repeat = buffer_size - number_of_frames
+                    to_repeat = True
+                    save_frequency = 1
+                    save_start = 1
+                counter = 1
+                index = 0
+                for file in path_list:
+                    if (counter % save_frequency == 0 and counter > save_start) or (counter % save_frequency == 0 and counter >= save_start and number_of_frames % save_frequency != 0):
+                        path = os.path.join(data_directory, video, file)
+                        img = np.array(cv2.imread(path))
+                        img = cv2.resize(img,(112,112))
+                        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                        img = img/255
+                            
+                        lab = self.labels_iterated[label]
+                        self.images.append(img)
+                        self.labels.append(lab)
+                        index += 1
+                        print(len(self.images))
+                        if counter == number_of_frames and to_repeat == True:
+                            for i in range (repeat +1):
+                                self.images.append(img)
+                                self.images.append(lab)
+                        counter += 1
+                        #self.training_data.append([img, lab])
         
 
 
