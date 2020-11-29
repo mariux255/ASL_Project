@@ -17,15 +17,16 @@ from datetime import datetime
 from torch.optim.lr_scheduler import StepLR
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
+dataset = MyCustomDataset(category='labels_2000',json_file_path="/home/marius/Documents/Projects/WLASL_v0.3.json", frame_location="/home/marius/Documents/Projects/Processed_data")
 
-dataset = MyCustomDataset("labels_2000")
+#dataset = MyCustomDataset("labels_200")
 dataset_size = (len(dataset))
 
-val_size = int(np.floor(dataset_size * 0.1))
+val_size = int(np.floor(dataset_size * 0.2))
 train_size = int(dataset_size - val_size)
 trainset, validset = random_split(dataset, [train_size, val_size])
-dataloader_train = DataLoader(trainset, batch_size=100, shuffle=True, num_workers=0)
-dataloader_val = DataLoader(validset, batch_size=100, shuffle=True, num_workers=0)
+dataloader_train = DataLoader(trainset, batch_size=200, shuffle=True, num_workers=4)
+dataloader_val = DataLoader(validset, batch_size=200, shuffle=True, num_workers=4)
 
 
 net = models.resnet18(pretrained=True)
@@ -41,9 +42,9 @@ net = net.to(device)
 
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.01, weight_decay= 0.00000001)
+optimizer = optim.SGD(net.parameters(), lr=0.01, momentum =0.9, weight_decay = 0.00005)
 criterion = criterion.to(device)
-scheduler = StepLR(optimizer, step_size = 5, gamma=0.1)
+scheduler = StepLR(optimizer, step_size = 10, gamma=0.1)
 def accuracy(ys, ts):
     y = torch.argmax(ys, dim = 1)
     x = ts
@@ -60,20 +61,21 @@ with open(filename,'w') as csvfile:
     Identification = 1
     csvwriter = csv.writer(csvfile)
     csvwriter.writerow(headers)
-    for epoch in range(20):  # loop over the dataset multiple times
-        
+    for epoch in range(30):  # loop over the dataset multiple times
+
         net.train()
         training_loss = 0.0
         running_acc = 0
         for i,(inputs, labels) in enumerate(dataloader_train):
             # get the inputs; data is a list of [inputs, labels]
-            inputs = inputs.view(-1, 3, 112, 112)
-            inputs = inputs.to(device)
+            inputs = inputs.view(-1, 3, 224, 224)
             inputs = inputs.float()
+            inputs = inputs.to(device)
+            labels = torch.LongTensor(labels)
             labels = torch.LongTensor(labels).to(device)
 
             optimizer.zero_grad()
-            
+
             outputs = net(inputs)
             _,predicted = torch.max(outputs.data,1)
             correct = (predicted == labels).sum().item()
@@ -82,7 +84,7 @@ with open(filename,'w') as csvfile:
             loss.backward()
             training_loss += loss.item()
             optimizer.step()
-            if i%50 == 0:
+            if i%30 == 0:
                 csvwriter.writerow(['{}'.format(Identification),'{}'.format("Training"),'{}'.format(epoch),'{}'.format(training_loss/(i+1)),'{}'.format(running_acc/(i+1))])
                 print(f"Training phase, Epoch: {epoch}. Loss: {training_loss/(i+1)}. Accuracy: {running_acc/(i+1)}.")
                 Identification += 1
@@ -92,9 +94,10 @@ with open(filename,'w') as csvfile:
         running_acc = 0
         for i, (inputs,labels) in enumerate(dataloader_val):
             with torch.no_grad():
-                inputs = inputs.view(-1,3,112,112)
-                inputs = inputs.to(device)
+                inputs = inputs.view(-1,3,224,224)
                 inputs = inputs.float()
+                inputs = inputs.to(device)
+                labels = torch.LongTensor(labels)
                 labels = labels.to(device)
                 outputs = net(inputs)
                 _,predicted = torch.max(outputs.data,1)
@@ -104,7 +107,7 @@ with open(filename,'w') as csvfile:
                 #print("preds: ",torch.argmax(outputs, dim=1))
                 #print("labs:", labels)
                 valError += loss.item()
-            if i%40 == 0:
+            if i%10 == 0:
                 csvwriter.writerow(['{}'.format(Identification),'{}'.format("Validation"),'{}'.format(epoch),'{}'.format(valError/(i+1)),'{}'.format(running_acc/(i+1))])
                 print(f"Validation phase, Epoch: {epoch}. Loss: {valError/(i+1)}. Accuracy: {running_acc/(i+1)}.")
                 Identification += 1

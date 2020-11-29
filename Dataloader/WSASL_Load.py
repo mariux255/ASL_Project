@@ -5,9 +5,10 @@ import cv2
 import os
 import numpy as np
 from tqdm import tqdm
+import natsort
 
 class MyCustomDataset(Dataset):
-    def __init__(self, category, json_file_path="/scratch/s174411/WLASL/WLASL_v0.3.json", frame_location="/scratch/s174411/Processed_data/"):
+    def __init__(self, category, json_file_path="/scratch/s174411/WLASL_v0.3.json", frame_location="/scratch/s174411/Processed_data/"):
         self.frame_location = frame_location
         # Defining count_dictionary which contains the number of videos for each class
         # and defining video_id_dictionary which has all of the video id's for each class.
@@ -26,25 +27,46 @@ class MyCustomDataset(Dataset):
                 self.count_dictionary[current_label] += 1
                 self.video_id_dictionary[current_label].append(video['video_id'])
 
-       
+
         self.labels_iterated = {}
         self.inv_video_id_dictionary = {}
         self.training_data = []
         self.Categories(category, frame_location)
 
     def __getitem__(self, index):
-        img = self.images[index]
-        lab = self.labels[index]
-        return [img,lab]
+        #buffer, label = self.training_data[index]
+        #images = []
+
+        # for i in range(64):
+        #     path = buffer[i]
+        #     #print("PATH: ", path)
+        #     img = np.array(cv2.imread(path))
+        #     img = cv2.resize(img, (224, 224))
+        #     img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+        #     #img = img/255
+        #     images.append(img)
+        # images = np.array(images)
+        # images = self.to_tensor(images)
+        #temp = buffer.transpose(1,2,3,0)
+        #img = temp[0]
+        #imgplot = plt.imshow(img)
+        #plt.show()
+        path, label = self.training_data[index]
+        img = np.array(cv2.imread(path))
+        img = cv2.resize(img, (224, 224))
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+        img = torch.from_numpy(img)
+        return [img, label]
 
 
     def __len__(self):
-        total = 0
-        folders = ([name for name in os.listdir(os.path.join(self.frame_location,"{}/".format(len(self.labels_x))))
-                    if os.path.isdir(os.path.join(self.frame_location,"{}/".format(len(self.labels_x)),name))])
-        for folder in folders:
-            contents = os.listdir(os.path.join(self.frame_location,"{}/".format(len(self.labels_x)),folder))
-            total += len(contents)
+        # total = 0
+        # folders = ([name for name in os.listdir(os.path.join(self.frame_location,"{}/".format(len(self.labels_x))))
+        #             if os.path.isdir(os.path.join(self.frame_location,"{}/".format(len(self.labels_x)),name))])
+        # for folder in folders:
+        #     contents = os.listdir(os.path.join(self.frame_location,"{}/".format(len(self.labels_x)),folder))
+        #     total += len(contents)
+        total = self.total_frames
         return total
 
 
@@ -58,56 +80,72 @@ class MyCustomDataset(Dataset):
         return sum_count
 
 
-    def make_training_data(self, labels_x,frame_location):
-        buffer_size = 16
-        self.images = []
-        self.labels = []
+    def make_training_data(self, labels_x,frame_location,buffer_size = 64,image_height = 224, image_width = 224):
+        self.total_frames = 0
         data_directory = ("{}/{}".format(frame_location, len(labels_x)))
         num_labels = len(labels_x)
         for label in tqdm(labels_x):
-            
             for video in self.video_id_dictionary[label]:
-                
+                buffer = []
                 path = os.path.join(data_directory, video)
-                path_list = os.listdir(path)
                 number_of_frames = len([file for file in os.listdir(path) if "jpg" in file])
-                save_frequency = np.floor(number_of_frames/buffer_size)
-                if save_frequency == 0:
-                    save_frequency = 1
-                if number_of_frames % save_frequency == 0:
-                    save_start = 0
-                else:
-                    save_start = save_frequency
-                if number_of_frames % save_frequency != 0 or number_of_frames / save_frequency > buffer_size:
-                    save_start =(np.ceil(number_of_frames/save_frequency)-buffer_size)*save_frequency
-                to_repeat=False
+                try:
+                    save_frequency = np.floor(number_of_frames/buffer_size)
+                    if save_frequency == 0:
+                        save_frequency = 1
+                    if number_of_frames % save_frequency == 0:
+                        save_start = 0
+                    else:
+                        save_start = save_frequency
+                    if number_of_frames % save_frequency  != 0 or number_of_frames / save_frequency > buffer_size:
+                        save_start = (np.ceil(number_of_frames/save_frequency)-buffer_size)*save_frequency
+                except Exception as e:
+                    print(e)
+                to_repeat = False
                 if number_of_frames < buffer_size:
                     repeat = buffer_size - number_of_frames
                     to_repeat = True
                     save_frequency = 1
                     save_start = 1
+
                 counter = 1
+                #buffer = np.empty((buffer_size, image_height, image_width, 3), np.dtype('float32'))
+                #buffer = []
                 index = 0
-                for file in path_list:
+                fff = natsort.natsorted(os.listdir(path),reverse=False)
+
+                for file in fff:
                     if (counter % save_frequency == 0 and counter > save_start) or (counter % save_frequency == 0 and counter >= save_start and number_of_frames % save_frequency != 0):
-                        path = os.path.join(data_directory, video, file)
-                        img = np.array(cv2.imread(path))
-                        img = cv2.resize(img,(112,112))
-                        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                        img = img/255
-                            
-                        lab = self.labels_iterated[label]
-                        self.images.append(img)
-                        self.labels.append(lab)
-                        index += 1
-                        print(len(self.images))
-                        if counter == number_of_frames and to_repeat == True:
-                            for i in range (repeat +1):
-                                self.images.append(img)
-                                self.images.append(lab)
-                        counter += 1
-                        #self.training_data.append([img, lab])
-        
+                        if "jpg" in file:
+                            try:
+                                path = os.path.join(data_directory, video, file)
+                                #img = np.array(cv2.imread(path))
+                                #img = cv2.resize(img, (image_height, image_width))
+                                #img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+                                #img = img/255
+                                self.training_data.append([path,self.labels_iterated[label]])
+                                self.total_frames += 1
+                                #print(path)
+                                #buffer[index] = img
+                                index += 1
+                                if counter == number_of_frames and to_repeat == True:
+                                    for i in range(repeat+1):
+                                        #buffer[index] = img
+                                        #buffer.append(img)
+                                        #buffer.append(path)
+                                        self.training_data.append([path,self.labels_iterated[label]])
+                                        self.total_frames += 1
+                                        index += 1
+                            except Exception as e:
+                                print(e)
+                                pass
+                    counter += 1
+                # if len(buffer) != buffer_size:
+                #     print("Buffer is not of the right size")
+                #     print("video:",video ,len(buffer))
+                #     print(f"Video:", video, "Number of frames:", number_of_frames, "Save_frequency:", save_frequency, "Save start:", save_start)
+                #self.training_data.append([(np.array(buffer)),self.labels_iterated[label]])
+
 
 
 
