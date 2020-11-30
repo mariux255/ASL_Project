@@ -17,13 +17,13 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(128, 256, 3)
         self.conv3 = nn.Conv2d(256, 512, 3)
         self.conv4 = nn.Conv2d(512, 256, 3)
-        self.fc3 = nn.Linear(2304, 1000)
+        self.fc3 = nn.Linear(25600, 100)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
         x = self.pool2(F.relu(self.conv3(x)))
         x = F.relu(self.conv4(x))
-        x = x.view(-1, 2304)
+        x = x.view(-1, 25600)
         x = self.fc3(x)
         return x

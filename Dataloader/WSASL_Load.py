@@ -6,6 +6,8 @@ import os
 import numpy as np
 from tqdm import tqdm
 import natsort
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 class MyCustomDataset(Dataset):
     def __init__(self, category, json_file_path="/scratch/s174411/WLASL_v0.3.json", frame_location="/scratch/s174411/Processed_data/"):
@@ -52,10 +54,14 @@ class MyCustomDataset(Dataset):
         #imgplot = plt.imshow(img)
         #plt.show()
         path, label = self.training_data[index]
+
         img = np.array(cv2.imread(path))
         img = cv2.resize(img, (224, 224))
         img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         img = torch.from_numpy(img)
+        #imgplot = plt.imshow(img)
+        #plt.show()
+
         return [img, label]
 
 
