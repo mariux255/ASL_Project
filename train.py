@@ -21,16 +21,16 @@ import matplotlib.image as mpimg
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #device = torch.device("cpu")
 print(device)
-#dataset = MyCustomDataset(category='labels_2000',json_file_path="/home/marius/Documents/Projects/WLASL_v0.3.json", frame_location="/home/marius/Documents/Projects/Processed_data")
+dataset = MyCustomDataset(category='labels_100',json_file_path="/home/marius/Documents/Projects/WLASL_v0.3.json", frame_location="/home/marius/Documents/Projects/Processed_data")
 
-dataset = MyCustomDataset("labels_2000")
+#dataset = MyCustomDataset("labels_2000")
 dataset_size = (len(dataset))
 
 val_size = int(np.floor(dataset_size * 0.1))
 train_size = int(dataset_size - val_size)
 trainset, validset = random_split(dataset, [train_size, val_size])
-dataloader_train = DataLoader(trainset, batch_size=100, shuffle=True, num_workers=5)
-dataloader_val = DataLoader(validset, batch_size=100, shuffle=True, num_workers=5)
+dataloader_train = DataLoader(trainset, batch_size=50, shuffle=True, num_workers=5)
+dataloader_val = DataLoader(validset, batch_size=50, shuffle=True, num_workers=5)
 
 
 net = Net()
@@ -65,7 +65,7 @@ with open(filename,'w') as csvfile:
     Identification = 1
     csvwriter = csv.writer(csvfile)
     csvwriter.writerow(headers)
-    for epoch in range(20):  # loop over the dataset multiple times
+    for epoch in range(1):  # loop over the dataset multiple times
 
         net.train()
         training_loss = 0.0
@@ -129,4 +129,5 @@ with open(filename,'w') as csvfile:
                 Identification += 1
         scheduler.step()
     csvwriter.writerow(title)
+torch.save(net,'Vanilla.pt')
 print('Finished Training')

@@ -116,7 +116,7 @@ class MyCustomDataset(Dataset):
                 if video in ignored_videos:
                     counterr += 1
                     #print(counterr)
-                    continue
+                    #continue
                 buffer = []
                 path = os.path.join(data_directory, video)
                 number_of_frames = len([file for file in os.listdir(path) if "jpg" in file])
